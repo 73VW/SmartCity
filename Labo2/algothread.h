@@ -48,6 +48,7 @@ struct initHab {
     int posArr;
     bool enRoute;
     int tempsAttente;
+    int id;
     //MORE THINGS HERE
 };
 

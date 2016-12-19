@@ -25,28 +25,18 @@ void* runHabitants(void* arguments)
     struct initHab* hab = (struct initHab*)arguments;
     AlgoThread* algoThread = ((AlgoThread*)hab->algoThread);
 
-    emit algoThread->initSite(1,2);
-    emit algoThread->initSite(2,3);
-    emit algoThread->initSite(3,3);
-    emit algoThread->initSite(4,4);
-    emit algoThread->initHabitant(1,1);
-    emit algoThread->initHabitant(2,1);
-    emit algoThread->initHabitant(3,2);
-    emit algoThread->initHabitant(4,3);
-    emit algoThread->initHabitant(5,4);
-    emit algoThread->initHabitant(6,3);
-    emit algoThread->initHabitant(7,4);
-    emit algoThread->initHabitant(8,2);
 
-    emit algoThread->startDeplacement(1,1,2,10);
-    emit algoThread->startDeplacement(2,2,3,8);
-    emit algoThread->startDeplacement(3,3,4,11);
-    emit algoThread->startDeplacement(4,4,1,5);
-    emit algoThread->startDeplacement(5,1,2,3);
-    emit algoThread->startDeplacement(6,2,3,7);
-    emit algoThread->startDeplacement(7,3,4,9);
-    emit algoThread->startDeplacement(8,4,1,12);
+    //@TODO destination, temps de trajet aléatoire
+    //@TODO temps de pause aléatoire à ajouter
+    //@TODO attente de vélo libre avant de déplacement
 
+
+    int tempsDeTrajet=10;
+    emit algoThread->startDeplacement(hab->id,hab->posDep,hab->posArr,tempsDeTrajet);
+
+
+    //@TODO lieu de départ prochain passage  = lieu d'arrivée
+    hab->posDep=hab->posArr;
 }
 
 
@@ -62,12 +52,34 @@ void* runMaintenance(void* arguments)
 
 void AlgoThread::run()
 {
-    //MAKE SOME CHANGES HERE
-    struct initHab* hab = new initHab();
-    hab->algoThread = this;
 
-    pthread_t thread_hab;
-    pthread_create (&thread_hab, NULL, runHabitants, (void*)hab);
+    // instantiation des sites
+    emit this->initSite(1,2);
+    emit this->initSite(2,3);
+    emit this->initSite(3,3);
+    emit this->initSite(4,4);
+
+
+    //MAKE SOME CHANGES HERE
+    struct initHab* hab[this->nbHabitants];
+
+
+    //@TODO Créer autant de threads qu'il y a d'habitants ! --> OK
+
+    //@TODO tirer aléatoirement le premier lieu de départ de chaque habitant
+    pthread_t tabThread_hab[this->nbHabitants];
+    for(int cptHabitants = 0; cptHabitants<this->nbHabitants; cptHabitants++){
+        hab[cptHabitants] = new initHab();
+        hab[cptHabitants]->algoThread = this;
+        hab[cptHabitants]->id=cptHabitants;
+        hab[cptHabitants]->posDep=cptHabitants%this->nbSite;
+        //@TODO position d'arrivée à tirer aléatoirement depuis le thread fils
+        hab[cptHabitants]->posArr=(cptHabitants*7)%this->nbSite;
+        emit this->initHabitant(cptHabitants,hab[cptHabitants]->posDep);
+        pthread_create(&tabThread_hab[cptHabitants], NULL, runHabitants, (void*)hab[cptHabitants]);
+    }
+
+
 
     struct initDep* dep = new initDep();
     dep->algoThread = this;
@@ -75,6 +87,10 @@ void AlgoThread::run()
     pthread_t thread_maint;
     pthread_create (&thread_maint, NULL, runMaintenance, (void*)dep);
 
-    pthread_join (thread_hab, NULL);
+
+
+    for(int cptHabitants = 0; cptHabitants<this->nbHabitants; cptHabitants++){
+        pthread_join (tabThread_hab[cptHabitants], NULL);
+    }
     pthread_join (thread_maint, NULL);
 }
