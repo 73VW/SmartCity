@@ -44,6 +44,10 @@ private:
 
 struct initHab {
     AlgoThread* algoThread;
+    int posDep;
+    int posArr;
+    bool enRoute;
+    int tempsAttente;
     //MORE THINGS HERE
 };
 
