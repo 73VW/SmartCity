@@ -21,7 +21,7 @@ AlgoThread::AlgoThread(MainWindow* mainWindow,int _nbSite,int _nbHabitants,int _
 
 void* runHabitants(void* arguments)
 {
-    //MAKE SOME CHANGE HERE
+    //MAKE SOME CHANGES HERE
     struct initHab* hab = (struct initHab*)arguments;
     AlgoThread* algoThread = ((AlgoThread*)hab->algoThread);
 
@@ -32,7 +32,7 @@ void* runHabitants(void* arguments)
 
 void* runMaintenance(void* arguments)
 {
-    //MAKE SOME CHANGE HERE
+    //MAKE SOME CHANGES HERE
     struct initDep* dep = (struct initDep*)arguments;
     AlgoThread* algoThread = (AlgoThread*)dep->algoThread;
 
@@ -42,7 +42,7 @@ void* runMaintenance(void* arguments)
 
 void AlgoThread::run()
 {
-    //MAKE SOME CHANGE HERE
+    //MAKE SOME CHANGES HERE
     struct initHab* hab = new initHab();
     hab->algoThread = this;
 
