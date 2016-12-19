@@ -25,8 +25,28 @@ void* runHabitants(void* arguments)
     struct initHab* hab = (struct initHab*)arguments;
     AlgoThread* algoThread = ((AlgoThread*)hab->algoThread);
 
-    emit algoThread->initSite(1,1);
+    emit algoThread->initSite(1,2);
+    emit algoThread->initSite(2,3);
+    emit algoThread->initSite(3,3);
+    emit algoThread->initSite(4,4);
     emit algoThread->initHabitant(1,1);
+    emit algoThread->initHabitant(2,1);
+    emit algoThread->initHabitant(3,2);
+    emit algoThread->initHabitant(4,3);
+    emit algoThread->initHabitant(5,4);
+    emit algoThread->initHabitant(6,3);
+    emit algoThread->initHabitant(7,4);
+    emit algoThread->initHabitant(8,2);
+
+    emit algoThread->startDeplacement(1,1,2,10);
+    emit algoThread->startDeplacement(2,2,3,8);
+    emit algoThread->startDeplacement(3,3,4,11);
+    emit algoThread->startDeplacement(4,4,1,5);
+    emit algoThread->startDeplacement(5,1,2,3);
+    emit algoThread->startDeplacement(6,2,3,7);
+    emit algoThread->startDeplacement(7,3,4,9);
+    emit algoThread->startDeplacement(8,4,1,12);
+
 }
 
 
