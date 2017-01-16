@@ -1,3 +1,10 @@
+/*               Programmation Concurrente
+ *                  Labo2
+ *                 Laurent Gander et Maël Pedretti
+ *               HE-Arc 2017
+ */
+
+
 #ifndef ALGOTHREAD_H
 #define ALGOTHREAD_H
 

@@ -1,3 +1,9 @@
+/*               Programmation Concurrente
+ *                  Labo2
+ *                 Laurent Gander et Maël Pedretti
+ *               HE-Arc 2017
+ */
+
 #include "mainwindow.h"
 #include <QApplication>
 #include <iostream>
