@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QDebug>
 #include <windows.h>
+#include <QWaitCondition>
 
 #include "mainwindow.h"
 #include "paramlist.h"
@@ -41,7 +42,8 @@ private:
      int nbHabitants;
      int nbBorne;
      int nbVelo;
-     QMutex *mutex;
+     QMutex **mutex;
+     QWaitCondition **conditionsArr;
 };
 
 struct initHab {
@@ -53,9 +55,10 @@ struct initHab {
     int id;
     int tempsTrajet;
     int* nbVeloSite;
-    QMutex* mutex;
+    QMutex** mutex;
     int nbSite;
     int nbBorne;
+    QWaitCondition **conditionsArr;
 };
 
 struct initDep {
@@ -64,7 +67,8 @@ struct initDep {
     int nbSite;
     int* nbVeloSite;
     int nbBorne;
-    QMutex* mutex;
+    QMutex** mutex;
+    QWaitCondition **conditionsArr;
     //MORE THINGS HERE
 };
 

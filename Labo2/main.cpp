@@ -8,15 +8,15 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-//    int nbSite = (int)argv[0];
-//    int nbHabitants= (int)argv[1];
-//    int nbBorne = (int)argv[2];
-//    int nbVelo=(int)argv[3];
+    int nbSite = atoi(argv[1]);
+    int nbHabitants= atoi(argv[2]);
+    int nbBorne = atoi(argv[3]);
+    int nbVelo = atoi(argv[4]);
 
-    int nbSite = 5;
-    int nbHabitants = 15;
-    int nbBorne = 5;
-    int nbVelo = 20;
+    //nbSite = 5;
+    //nbHabitants = 15;
+    //nbBorne = 5;
+    //nbVelo = 20;
 
     if(nbSite >= 2 && nbBorne >= 4 && nbVelo >= nbSite*(nbBorne-2)+3)
     {
@@ -28,6 +28,9 @@ int main(int argc, char *argv[])
 
         return a.exec();
     }
-    else return 0;
-
+    else{
+        std::cout << "nbSite " << nbSite << " nbHabitants " << nbHabitants << " nbBorne " << nbBorne << " nbVelo " << nbVelo << std::endl;
+        system("pause");
+        return 0;
+    }
 }

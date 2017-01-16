@@ -34,3 +34,5 @@ FORMS    += mainwindow.ui \
 
 RESOURCES += \
     icon.qrc
+
+CONFIG += console

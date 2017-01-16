@@ -19,7 +19,8 @@ AlgoThread::AlgoThread(MainWindow* mainWindow,int _nbSite,int _nbHabitants,int _
     connect(this,SIGNAL(setCamVelo(int)),mainWindow,SLOT(setCamVelo(int)));
     connect(this,SIGNAL(startCamionDeplacement(int,int,int)),mainWindow,SLOT(startCamionDeplacement(int,int,int)));
 
-    mutex = new QMutex();
+    mutex = new QMutex*[nbSite]();
+    conditionsArr = new QWaitCondition*[nbSite]();
 }
 
 void* runHabitants(void* arguments)
@@ -34,25 +35,30 @@ void* runHabitants(void* arguments)
     while(hab->posArr==hab->posDep)
        hab->posArr=rand()%hab->nbSite;
 
-    hab->mutex->lock();
+    hab->mutex[hab->posDep]->lock();
     if(hab->nbVeloSite[hab->posDep]>=1){
         hab->nbVeloSite[hab->posDep]--;
+        hab->conditionsArr[hab->posDep]->wakeOne();
         emit algoThread->setHabitantState(hab->id, 2);
         emit algoThread->startDeplacement(hab->id,hab->posDep,hab->posArr,hab->tempsTrajet);
         emit algoThread->setSiteVelo(hab->posDep, hab->nbVeloSite[hab->posDep]);
-        hab->mutex->unlock();
+        hab->mutex[hab->posDep]->unlock();
         Sleep(hab->tempsTrajet*1000);
-        hab->mutex->lock();
+
+
+        hab->mutex[hab->posArr]->lock();
+        if(hab->nbVeloSite[hab->posArr]>=hab->nbBorne)
+            hab->conditionsArr[hab->posArr]->wait(hab->mutex[hab->posArr]);
         emit algoThread->setHabitantState(hab->id, 3);
         hab->nbVeloSite[hab->posArr]++;
         emit algoThread->setSiteVelo(hab->posArr, hab->nbVeloSite[hab->posArr]);
-        hab->mutex->unlock();
+        hab->mutex[hab->posArr]->unlock();
         Sleep(hab->tempsAttente*1000);
         emit algoThread->setHabitantState(hab->id, 1);
         hab->posDep=hab->posArr;
     }
     else{
-        hab->mutex->unlock();
+        hab->mutex[hab->posDep]->unlock();
     }
     hab->tempsTrajet=rand()%10+1;
     hab->tempsAttente=rand()%10+1;
@@ -90,7 +96,7 @@ void* runMaintenance(void* arguments)
             posArr=i;
             emit algoThread->startCamionDeplacement(posDep, posArr, tempsTrajet);
             Sleep(tempsTrajet*1000);
-            dep->mutex->lock();
+            dep->mutex[i]->lock();
             if(nbVeloCamion<4&&dep->nbVeloSite[i]>dep->nbBorne-2){
                 //si le nombre de vélos à emporter est > au nombre de place dans le camion
                 if(dep->nbVeloSite[i]-(dep->nbBorne-2)>4-nbVeloCamion){
@@ -103,6 +109,8 @@ void* runMaintenance(void* arguments)
                     c=dep->nbVeloSite[i]-(dep->nbBorne-2);
                 }
                 dep->nbVeloSite[i]-=c;
+                for(int cpt=0; cpt<c;cpt++)
+                    dep->conditionsArr[i]->wakeOne();
                 nbVeloCamion+=c;
             }
             else if(nbVeloCamion>0&&dep->nbVeloSite[i]<dep->nbBorne-2){
@@ -121,7 +129,7 @@ void* runMaintenance(void* arguments)
             }
             emit algoThread->setSiteVelo(i, dep->nbVeloSite[i]);
             emit algoThread->setCamVelo(nbVeloCamion);
-            dep->mutex->unlock();
+            dep->mutex[i]->unlock();
             posDep=posArr;
         }
         emit algoThread->startCamionDeplacement(posDep, posDep+1, tempsTrajet);
@@ -137,14 +145,14 @@ void* runMaintenance(void* arguments)
 
 void AlgoThread::run()
 {
-    //@TODO Verrouiller les endroits lorsque plus de 5 vélos y sont déjà
-    //Pour ça utiliser un tableau de mutex et de QWaitCondition
 
     int nbVeloParSite[nbSite];
     // instantiation des sites
     for(int cpt=0; cpt<nbSite; cpt++){
         nbVeloParSite[cpt]=nbBorne-2;
         emit this->initSite(cpt, nbVeloParSite[cpt]);
+        mutex[cpt] = new QMutex();
+        conditionsArr[cpt]= new QWaitCondition();
     }
     int nbVeloDepot = nbVelo - nbSite*(nbBorne-2);
 
@@ -161,8 +169,9 @@ void AlgoThread::run()
         hab[cptHabitants]->mutex = this->mutex;
         hab[cptHabitants]->id=cptHabitants;
         hab[cptHabitants]->posDep=rand()%nbSite;
-        hab[cptHabitants]->tempsTrajet=rand()%20+5;
-        hab[cptHabitants]->tempsAttente=rand()%5+5;
+        hab[cptHabitants]->tempsTrajet=rand()%5+5;
+        hab[cptHabitants]->tempsAttente=rand()%5+1;
+        hab[cptHabitants]->conditionsArr=this->conditionsArr;
         emit this->initHabitant(cptHabitants,hab[cptHabitants]->posDep);
         pthread_create(&tabThread_hab[cptHabitants], NULL, runHabitants, (void*)hab[cptHabitants]);
     }
@@ -176,6 +185,7 @@ void AlgoThread::run()
     dep->nbVeloSite = nbVeloParSite;
     dep->nbBorne=this->nbBorne;
     dep->mutex = this->mutex;
+    dep->conditionsArr=this->conditionsArr;
 
     pthread_t thread_maint;
     pthread_create (&thread_maint, NULL, runMaintenance, (void*)dep);
