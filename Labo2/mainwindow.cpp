@@ -64,7 +64,7 @@ void MainWindow::initHabitant(int habId,int initSiteId)
 
 void MainWindow::initCamion()
 {
-    // Mettre le camio au dépot
+    // Mettre le camion au dépot
     camion->setPosition(depot->getDest());
 }
 

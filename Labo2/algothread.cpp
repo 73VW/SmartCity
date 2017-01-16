@@ -1,4 +1,5 @@
 #include "algothread.h"
+#include "time.h"
 
 AlgoThread::AlgoThread(MainWindow* mainWindow,int _nbSite,int _nbHabitants,int _nbBorne,int _nbVelo)
 {
@@ -17,64 +18,151 @@ AlgoThread::AlgoThread(MainWindow* mainWindow,int _nbSite,int _nbHabitants,int _
     connect(this,SIGNAL(setDepotVelo(int)),mainWindow,SLOT(setDepotVelo(int)));
     connect(this,SIGNAL(setCamVelo(int)),mainWindow,SLOT(setCamVelo(int)));
     connect(this,SIGNAL(startCamionDeplacement(int,int,int)),mainWindow,SLOT(startCamionDeplacement(int,int,int)));
+
+    mutex = new QMutex();
 }
 
 void* runHabitants(void* arguments)
 {
-    //MAKE SOME CHANGES HERE
     struct initHab* hab = (struct initHab*)arguments;
     AlgoThread* algoThread = ((AlgoThread*)hab->algoThread);
+    emit algoThread->setHabitantState(hab->id, 1);
+
+    while(1){
+
+    hab->posArr=rand()%hab->nbSite;
+    while(hab->posArr==hab->posDep)
+       hab->posArr=rand()%hab->nbSite;
+
+    hab->mutex->lock();
+    if(hab->nbVeloSite[hab->posDep]>=1){
+        hab->nbVeloSite[hab->posDep]--;
+        emit algoThread->setHabitantState(hab->id, 2);
+        emit algoThread->startDeplacement(hab->id,hab->posDep,hab->posArr,hab->tempsTrajet);
+        emit algoThread->setSiteVelo(hab->posDep, hab->nbVeloSite[hab->posDep]);
+        hab->mutex->unlock();
+        Sleep(hab->tempsTrajet*1000);
+        hab->mutex->lock();
+        emit algoThread->setHabitantState(hab->id, 3);
+        hab->nbVeloSite[hab->posArr]++;
+        emit algoThread->setSiteVelo(hab->posArr, hab->nbVeloSite[hab->posArr]);
+        hab->mutex->unlock();
+        Sleep(hab->tempsAttente*1000);
+        emit algoThread->setHabitantState(hab->id, 1);
+        hab->posDep=hab->posArr;
+    }
+    else{
+        hab->mutex->unlock();
+    }
+    hab->tempsTrajet=rand()%10+1;
+    hab->tempsAttente=rand()%10+1;
 
 
-    //@TODO destination, temps de trajet aléatoire
-    //@TODO temps de pause aléatoire à ajouter
-    //@TODO attente de vélo libre avant de déplacement
-
-
-    int tempsDeTrajet=10;
-    emit algoThread->startDeplacement(hab->id,hab->posDep,hab->posArr,tempsDeTrajet);
-
-
-    //@TODO lieu de départ prochain passage  = lieu d'arrivée
-    hab->posDep=hab->posArr;
+    }
 }
 
 
 void* runMaintenance(void* arguments)
 {
-    //MAKE SOME CHANGES HERE
     struct initDep* dep = (struct initDep*)arguments;
     AlgoThread* algoThread = (AlgoThread*)dep->algoThread;
 
-    emit algoThread->setDepotVelo(1);
+    emit algoThread->setDepotVelo(dep->nbVelo);
     emit algoThread->initCamion();
+
+    int tempsTrajet=rand()%10+1;
+    int posArr;
+    int nbVeloCamion;
+    int c;
+    while(1){
+        int posDep=-1;
+        Sleep(10000);
+
+        if(dep->nbVelo>=2)
+            nbVeloCamion=2;
+        else
+            nbVeloCamion=dep->nbVelo;
+
+        dep->nbVelo-=nbVeloCamion;
+        emit algoThread->setDepotVelo(dep->nbVelo);
+        emit algoThread->setCamVelo(nbVeloCamion);
+        for(int i=0; i<dep->nbSite; i++){
+            posArr=i;
+            emit algoThread->startCamionDeplacement(posDep, posArr, tempsTrajet);
+            Sleep(tempsTrajet*1000);
+            dep->mutex->lock();
+            if(nbVeloCamion<4&&dep->nbVeloSite[i]>dep->nbBorne-2){
+                //si le nombre de vélos à emporter est > au nombre de place dans le camion
+                if(dep->nbVeloSite[i]-(dep->nbBorne-2)>4-nbVeloCamion){
+                    //on emporte le nombre de vélos correspondant au nombre de place
+                    c=4-nbVeloCamion;
+                }
+                //sinon si le nombre de vélos à emporter est <= au nb de place
+                else{
+                    //on emporte tous les vélos en trop
+                    c=dep->nbVeloSite[i]-(dep->nbBorne-2);
+                }
+                dep->nbVeloSite[i]-=c;
+                nbVeloCamion+=c;
+            }
+            else if(nbVeloCamion>0&&dep->nbVeloSite[i]<dep->nbBorne-2){
+                //si le nombre de vélos à déposer est > que le nb de vélos dans le camion
+                if(dep->nbBorne-2-dep->nbVeloSite[i]>nbVeloCamion){
+                    //on dépose le nombre de vélos dans le camion
+                    c=nbVeloCamion;
+                }
+                //sinon si le nombre de vélos à déposer est <= au nb de vélos dans le camion
+                else{
+                    //on dépose autant de vélos que nécessaire
+                    c=dep->nbBorne-2-dep->nbVeloSite[i];
+                }
+                dep->nbVeloSite[i]+=c;
+                nbVeloCamion-=c;
+            }
+            emit algoThread->setSiteVelo(i, dep->nbVeloSite[i]);
+            emit algoThread->setCamVelo(nbVeloCamion);
+            dep->mutex->unlock();
+            posDep=posArr;
+        }
+        emit algoThread->startCamionDeplacement(posDep, posDep+1, tempsTrajet);
+        Sleep(tempsTrajet*1000);
+        dep->nbVelo+=nbVeloCamion;
+        emit algoThread->setDepotVelo(dep->nbVelo);
+        emit algoThread->setCamVelo(0);
+
+    }
 }
+
+
 
 void AlgoThread::run()
 {
+    //@TODO Verrouiller les endroits lorsque plus de 5 vélos y sont déjà
+    //Pour ça utiliser un tableau de mutex et de QWaitCondition
 
+    int nbVeloParSite[nbSite];
     // instantiation des sites
-    emit this->initSite(1,2);
-    emit this->initSite(2,3);
-    emit this->initSite(3,3);
-    emit this->initSite(4,4);
+    for(int cpt=0; cpt<nbSite; cpt++){
+        nbVeloParSite[cpt]=nbBorne-2;
+        emit this->initSite(cpt, nbVeloParSite[cpt]);
+    }
+    int nbVeloDepot = nbVelo - nbSite*(nbBorne-2);
 
-
-    //MAKE SOME CHANGES HERE
     struct initHab* hab[this->nbHabitants];
 
-
-    //@TODO Créer autant de threads qu'il y a d'habitants ! --> OK
-
-    //@TODO tirer aléatoirement le premier lieu de départ de chaque habitant
+    srand(time(NULL));
     pthread_t tabThread_hab[this->nbHabitants];
     for(int cptHabitants = 0; cptHabitants<this->nbHabitants; cptHabitants++){
         hab[cptHabitants] = new initHab();
+        hab[cptHabitants]->nbVeloSite = nbVeloParSite;
+        hab[cptHabitants]->nbSite = this->nbSite;
+        hab[cptHabitants]->nbBorne = this->nbBorne;
         hab[cptHabitants]->algoThread = this;
+        hab[cptHabitants]->mutex = this->mutex;
         hab[cptHabitants]->id=cptHabitants;
-        hab[cptHabitants]->posDep=cptHabitants%this->nbSite;
-        //@TODO position d'arrivée à tirer aléatoirement depuis le thread fils
-        hab[cptHabitants]->posArr=(cptHabitants*7)%this->nbSite;
+        hab[cptHabitants]->posDep=rand()%nbSite;
+        hab[cptHabitants]->tempsTrajet=rand()%20+5;
+        hab[cptHabitants]->tempsAttente=rand()%5+5;
         emit this->initHabitant(cptHabitants,hab[cptHabitants]->posDep);
         pthread_create(&tabThread_hab[cptHabitants], NULL, runHabitants, (void*)hab[cptHabitants]);
     }
@@ -83,6 +171,11 @@ void AlgoThread::run()
 
     struct initDep* dep = new initDep();
     dep->algoThread = this;
+    dep->nbVelo = nbVeloDepot;
+    dep->nbSite = this->nbSite;
+    dep->nbVeloSite = nbVeloParSite;
+    dep->nbBorne=this->nbBorne;
+    dep->mutex = this->mutex;
 
     pthread_t thread_maint;
     pthread_create (&thread_maint, NULL, runMaintenance, (void*)dep);

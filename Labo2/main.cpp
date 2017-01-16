@@ -14,9 +14,9 @@ int main(int argc, char *argv[])
 //    int nbVelo=(int)argv[3];
 
     int nbSite = 5;
-    int nbHabitants= 10;
+    int nbHabitants = 15;
     int nbBorne = 5;
-    int nbVelo=30;
+    int nbVelo = 20;
 
     if(nbSite >= 2 && nbBorne >= 4 && nbVelo >= nbSite*(nbBorne-2)+3)
     {

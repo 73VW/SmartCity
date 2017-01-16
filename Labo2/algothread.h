@@ -2,6 +2,7 @@
 #define ALGOTHREAD_H
 
 #include <QThread>
+#include <QMutex>
 #include <QDebug>
 #include <windows.h>
 
@@ -40,6 +41,7 @@ private:
      int nbHabitants;
      int nbBorne;
      int nbVelo;
+     QMutex *mutex;
 };
 
 struct initHab {
@@ -49,11 +51,20 @@ struct initHab {
     bool enRoute;
     int tempsAttente;
     int id;
-    //MORE THINGS HERE
+    int tempsTrajet;
+    int* nbVeloSite;
+    QMutex* mutex;
+    int nbSite;
+    int nbBorne;
 };
 
 struct initDep {
     AlgoThread* algoThread;
+    int nbVelo;
+    int nbSite;
+    int* nbVeloSite;
+    int nbBorne;
+    QMutex* mutex;
     //MORE THINGS HERE
 };
 
